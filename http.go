@@ -11,9 +11,15 @@ import (
 )
 
 func main() {
+	if len(os.Args) != 2 {
+		fmt.Fprintf(os.Stderr, "usage: %v <host:port>\n", os.Args[0])
+		os.Exit(2)
+	}
+	addr := os.Args[1]
+
 	http.HandleFunc("/save", saveFunc)
 	http.Handle("/", http.FileServer(http.Dir("static")))
-	log.Fatal(http.ListenAndServe(os.Args[1], nil))
+	log.Fatal(http.ListenAndServe(addr, nil))
 }
 
 func saveFunc(w http.ResponseWriter, r *http.Request) {
