@@ -59,9 +59,10 @@ func saveFunc(w http.ResponseWriter, r *http.Request) {
 			logError(w, "error reading: %v", err)
 			return
 		}
-		defer p.Close()
 		filename := filepath.Join(dir, filepath.FromSlash("/"+path.Clean(p.FileName())))
-		if err := writeFile(filename, p); err != nil {
+		err = writeFile(filename, p)
+		p.Close()
+		if err != nil {
 			logError(w, "couldn't write %v: %v", filename, err)
 			return
 		}
