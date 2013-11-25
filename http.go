@@ -17,7 +17,7 @@ func main() {
 }
 
 func saveFunc(w http.ResponseWriter, r *http.Request) {
-  mr, err := r.MultipartReader() // 20 MB.
+  mr, err := r.MultipartReader()
   if err != nil {
     http.Error(w, "error parsing multipart form", 500)
   }
