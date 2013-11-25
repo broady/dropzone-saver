@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 )
@@ -25,11 +26,13 @@ func main() {
 func saveFunc(w http.ResponseWriter, r *http.Request) {
 	mr, err := r.MultipartReader()
 	if err != nil {
-		http.Error(w, "error parsing multipart form", 500)
+		logError(w, "error parsing form: %v", err)
+		return
 	}
-	dir := fmt.Sprintf("%d", time.Now().Unix())
-	if err := os.Mkdir(dir, 0777); err != nil {
-		http.Error(w, fmt.Sprintf("couldn't write directory %s", dir), 500)
+	dir, err := mkdir()
+	if err != nil {
+		logError(w, "error creating directory: %v", err)
+		return
 	}
 	for {
 		p, err := mr.NextPart()
@@ -37,16 +40,49 @@ func saveFunc(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		if err != nil {
-			http.Error(w, fmt.Sprintf("couldn't read file: %v", err), 500)
+			logError(w, "error reading: %v", err)
+			return
 		}
 		defer p.Close()
-		f, err := os.Create(filepath.Join(dir, p.FileName()))
-		if err != nil {
-			http.Error(w, fmt.Sprintf("couldn't create file: %v", err), 500)
-		}
-		if _, err := io.Copy(f, p); err != nil {
-			http.Error(w, fmt.Sprintf("couldn't write file: %v", err), 500)
+		filename := filepath.Join(dir, filepath.FromSlash("/"+path.Clean(p.FileName())))
+		if err := writeFile(filename, p); err != nil {
+			logError(w, "couldn't write %v: %v", filename, err)
+			return
 		}
 	}
 	fmt.Fprintf(w, "all done!")
+}
+
+func mkdir() (string, error) {
+	dir := time.Now().Format("2006-01-02-15-04")
+	if fi, err := os.Stat(dir); err == nil {
+		if fi.IsDir() {
+			return dir, nil
+		}
+		return "", fmt.Errorf("path %v exists and is not a directory", dir)
+	} else if !os.IsNotExist(err) {
+		return "", err
+	}
+	if err := os.Mkdir(dir, 0777); err != nil {
+		return "", err
+	}
+	return dir, nil
+}
+
+func writeFile(name string, r io.Reader) error {
+	f, err := os.Create(name)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(f, r); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
+}
+
+func logError(w http.ResponseWriter, format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	log.Print(msg)
+	http.Error(w, msg, http.StatusInternalServerError)
 }
