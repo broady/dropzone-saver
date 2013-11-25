@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"go/build"
 	"io"
 	"log"
 	"net/http"
@@ -34,9 +35,24 @@ func main() {
 	}
 	addr := os.Args[1]
 
+	dir, err := staticContent()
+	if err != nil {
+		log.Fatalf("couldn't find static content: %v", err)
+	}
+	http.Handle("/", http.FileServer(http.Dir(dir)))
 	http.HandleFunc("/save", saveFunc)
-	http.Handle("/", http.FileServer(http.Dir("static")))
 	log.Fatal(http.ListenAndServe(addr, nil))
+}
+
+func staticContent() (dir string, err error) {
+	if fi, err := os.Stat("static"); err == nil && fi.IsDir() {
+		return "static", nil
+	}
+	pkg, err := build.Import("github.com/broady/dropzone-saver", "", build.FindOnly)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(pkg.Dir, "static"), nil
 }
 
 func saveFunc(w http.ResponseWriter, r *http.Request) {
