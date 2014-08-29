@@ -68,10 +68,10 @@ func saveFunc(w http.ResponseWriter, r *http.Request) {
 		logError(w, "error creating directory: %v", err)
 		return
 	}
-  if err := symlink(dir); err != nil {
-    logError(w, "error creating symlink: %v", err)
-    return
-  }
+	if err := symlink(dir); err != nil {
+		logError(w, "error creating symlink: %v", err)
+		return
+	}
 	for {
 		p, err := mr.NextPart()
 		if err == io.EOF {
@@ -111,18 +111,18 @@ func mkdir() (string, error) {
 func symlink(dir string) error {
 	if fi, err := os.Stat(symlinkFilename); err == nil {
 		if fi.Mode()&os.ModeSymlink == 0 {
-      // Symlink already exists. Remove it.
-      if err := os.Remove(fi.Name()); err != nil {
-        return err
-      }
-      // NOTE: continue to create symlink below.
+			// Symlink already exists. Remove it.
+			if err := os.Remove(fi.Name()); err != nil {
+				return err
+			}
+			// NOTE: continue to create symlink below.
 		} else {
-      return fmt.Errorf("%v exists and is not a symlink", symlinkFilename)
-    }
+			return fmt.Errorf("%v exists and is not a symlink", symlinkFilename)
+		}
 	} else if !os.IsNotExist(err) {
 		return err
 	}
-  return os.Symlink(dir, symlinkFilename)
+	return os.Symlink(dir, symlinkFilename)
 }
 
 func writeFile(name string, r io.Reader) error {
